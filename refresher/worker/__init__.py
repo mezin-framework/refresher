@@ -1,8 +1,11 @@
 import traceback
 import json
+import random
 from redis import Redis
+from threading import Thread
 from refresher.worker.handler import Handler
-from refresher.services import plugin_service
+from utils.services import plugin_service
+from utils.work_distributer.requester import RefreshRequester
 
 class RefreshWorker(object):
     ''' Responsible for using a Academic Parser
@@ -12,19 +15,23 @@ class RefreshWorker(object):
 
     def __init__(self):
         self.refresh_queue = RefreshQueue()
+        self.registry_requester = RefreshRequester('refresher_registry')
+        RefresherRegistry().start()
 
     def run(self):
         while True:
             try:
                 data = self.refresh_queue.get_new_payload()
-                self.working = True
                 action = data.get('action')
                 if action == 'install_plugin':
-                    plugin_service.install_plugin(data.get('plugin_repo'))
-                    self.refresh_queue.respond({'status': 'success'})
+                    plugin_repo = data.get('plugin_repo')
+                    plugin_service.install_plugin(plugin_repo)
+                    self.registry_requester.block_request(data)
+                    self.refresh_queue.respond({"status": "success"})
                 else:
                     plugin = data.get('plugin')
-                    action = plugin_service.get_action_from_plugin(plugin, action)
+                    action = plugin_service.get_refresher_action_from_plugin(plugin, action)
+                    print plugin, data.get('action')
                     queue = RefreshQueue(work_id=self.refresh_queue.work_id)
                     self.refresh_queue.clear()
                     Handler(action, data, queue).start()
@@ -32,6 +39,7 @@ class RefreshWorker(object):
                 traceback.print_exc()
                 self.refresh_queue.respond({"status": "internal_error"})
                 continue
+
 
 class RefreshQueue(object):
     ''' Responsible for encapsulating Queue behaviour,
@@ -58,3 +66,29 @@ class RefreshQueue(object):
 
     def clear(self):
         self.work_id = ''
+
+
+class RefresherRegistry(Thread):
+
+    def __init__(self):
+        self.queue = RefreshQueue()
+        self.queue.QUEUE = 'refresher_registry'
+        self.workers = []
+        Thread.__init__(self)
+
+    def run(self):
+        while True:
+            try:
+                data = self.queue.get_new_payload()
+                action = data.get('action')
+                if action == 'register':
+                    self.workers.append(data.get('name'))
+                    self.queue.respond({"status": 'success'})
+                    print self.workers
+                elif action == 'install_plugin':
+                    for queue in self.workers:
+                        requester = RefreshRequester(queue)
+                        requester.block_request(data)
+                    self.queue.respond({"status": "success"})
+            except:
+                traceback.print_exc()
