@@ -86,9 +86,15 @@ class RefresherRegistry(Thread):
                     self.queue.respond({"status": 'success'})
                     print self.workers
                 elif action == 'install_plugin':
+                    threads = []
                     for queue in self.workers:
                         requester = RefreshRequester(queue)
-                        requester.block_request(data)
+                        t = Thread(target=requester.block_request, args=(data,))
+                        threads.append(t)
+                        t.start()
+                    for t in threads:
+                        t.join()
+
                     self.queue.respond({"status": "success"})
             except:
                 traceback.print_exc()
