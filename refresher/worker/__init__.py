@@ -15,8 +15,7 @@ class RefreshWorker(object):
 
     def __init__(self):
         self.refresh_queue = RefreshQueue()
-        self.registry_requester = RefreshRequester('refresher_registry')
-        RefresherRegistry().start()
+        self.registry_requester = RefreshRequester('worker_registry')
 
     def run(self):
         while True:
@@ -66,35 +65,3 @@ class RefreshQueue(object):
 
     def clear(self):
         self.work_id = ''
-
-
-class RefresherRegistry(Thread):
-
-    def __init__(self):
-        self.queue = RefreshQueue()
-        self.queue.QUEUE = 'refresher_registry'
-        self.workers = []
-        Thread.__init__(self)
-
-    def run(self):
-        while True:
-            try:
-                data = self.queue.get_new_payload()
-                action = data.get('action')
-                if action == 'register':
-                    self.workers.append(data.get('name'))
-                    self.queue.respond({"status": 'success'})
-                    print self.workers
-                elif action == 'install_plugin':
-                    threads = []
-                    for queue in self.workers:
-                        requester = RefreshRequester(queue)
-                        t = Thread(target=requester.block_request, args=(data,))
-                        threads.append(t)
-                        t.start()
-                    for t in threads:
-                        t.join()
-
-                    self.queue.respond({"status": "success"})
-            except:
-                traceback.print_exc()
