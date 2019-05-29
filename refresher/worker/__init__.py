@@ -16,6 +16,16 @@ class RefreshWorker(object):
     def __init__(self):
         self.refresh_queue = RefreshQueue()
         self.registry_requester = RefreshRequester('worker_registry')
+        self.check_install_plugins()
+
+    def check_install_plugins(self):
+        plugins = self.registry_requester.block_request({"action": "get_plugins"})
+        plugins = plugins.get('plugins')
+        for p in plugins:
+            try:
+                plugin_service.get_refresher_plugin(p.get('plugin_name'))
+            except:
+                plugin_service.install_plugin(p.get('plugin_repo'))
 
     def run(self):
         while True:
