@@ -25,7 +25,10 @@ class RefreshWorker(object):
             try:
                 plugin_service.get_refresher_plugin(p.get('plugin_name'))
             except:
-                plugin_service.install_plugin(p.get('plugin_repo'))
+                try:
+                    plugin_service.install_plugin(p.get('plugin_repo'))
+                except:
+                    traceback.print_exc()
 
     def run(self):
         while True:
