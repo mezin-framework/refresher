@@ -21,7 +21,7 @@ class RefreshWorker(object):
 
     def check_install_plugins(self):
         plugins = self.registry_requester.block_request({"action": "get_plugins"})
-        plugins = plugins.get('plugins')
+        plugins = plugins.get('data')
         for p in plugins:
             try:
                 plugin_service.get_refresher_plugin(p.get('plugin_name'))
