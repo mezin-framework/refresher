@@ -3,6 +3,7 @@ import json
 import random
 from redis import Redis
 from threading import Thread
+from refresher import components
 from refresher.worker.handler import Handler
 from utils.services import plugin_service
 from utils.work_distributer.requester import RefreshRequester
@@ -42,7 +43,10 @@ class RefreshWorker(object):
                     self.refresh_queue.respond({"status": "success"})
                 else:
                     plugin = data.get('plugin')
-                    action = plugin_service.get_refresher_action_from_plugin(plugin, action)
+                    if plugin in components.COMPONENTS:
+                        action = components.get_action_from_component(plugin, action)
+                    else:
+                        action = plugin_service.get_refresher_action_from_plugin(plugin, action)
                     print plugin, data.get('action')
                     queue = RefreshQueue(work_id=self.refresh_queue.work_id)
                     self.refresh_queue.clear()
