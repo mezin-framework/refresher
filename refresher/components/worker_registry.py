@@ -8,7 +8,7 @@ def get_plugins(*args, **kwargs):
 def delete_plugin(plugin_name, *args, **kwargs):
     r = RefreshRequester('worker_registry')
     return r.block_request({
-        "action": "get_plugins",
+        "action": "delete_plugin",
         "plugin_name": plugin_name
     })
 
