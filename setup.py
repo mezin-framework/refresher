@@ -6,7 +6,7 @@ setup(
     version='1.0',
     author='Matheus Melo',
     install_requires=[
-        "redis==3.0.1"
+        "redis==4.5.3"
     ],
     packages=find_packages()
 )
